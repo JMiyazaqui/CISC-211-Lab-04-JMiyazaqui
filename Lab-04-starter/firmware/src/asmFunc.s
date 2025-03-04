@@ -75,64 +75,84 @@ asmFunc:
  
     
     /*** STUDENTS: Place your code BELOW this line!!! **************/
-    /* Load balance from memory */
-    ldr r1, =balance
-    ldr r2, [r1]
+    /* Initialize output variables to 0 */
+    LDR r4, =transaction
+    MOV r5, #0
+    STR r5, [r4]
+    LDR r4, =eat_out
+    STR r5, [r4]
+    LDR r4, =stay_in
+    STR r5, [r4]
+    LDR r4, =eat_ice_cream
+    STR r5, [r4]
+    LDR r4, =we_have_a_problem
+    STR r5, [r4]
 
-    /* Check if transaction amount in r0 is within range (-1000 to 1000) */
-    mov r3, #1000
-    cmp r0, r3
-    bgt overflow_error
-    rsb r3, r3, #0  /* r3 = -1000 */
-    cmp r0, r3
-    blt overflow_error
+    /* Load balance into r6 and transaction (r0) into r7 */
+    LDR r6, =balance
+    LDR r6, [r6]
+    MOV r7, r0
 
-    /* Calculate tmpBalance = balance + transaction */
-    adds r4, r2, r0  /* r4 = tmpBalance */
-    bvs overflow_error  /* Branch if overflow occurs */
+    /* Check if transaction is out of range (-1000 to 1000) */
+    CMP r7, #1000
+    BGT handle_problem
+    CMP r7, #-1000
+    BLT handle_problem
 
-    /* Store transaction amount */
-    ldr r5, =transaction
-    str r0, [r5]
+    /* Compute tmpBalance = balance + transaction and check for overflow */
+    ADDS r8, r6, r7  /* Adds with flag update */
+    BVS handle_problem  /* Branch if overflow occurred */
 
     /* Store new balance */
-    str r4, [r1]
+    LDR r9, =balance
+    STR r8, [r9]
 
-    /* Set output variables based on new balance */
-    ldr r6, =eat_out
-    ldr r7, =stay_in
-    ldr r8, =eat_ice_cream
-    mov r9, #0
-    str r9, [r6]
-    str r9, [r7]
-    str r9, [r8]
+    /* Store valid transaction */
+    LDR r4, =transaction
+    STR r7, [r4]
 
-    cmp r4, #0
-    beq set_stay_in
-    bmi set_eat_ice_cream
-    b set_eat_out
+    /* Decision logic based on new balance */
+    CMP r8, #0
+    BGT set_eat_out
+    BLT set_stay_in
 
-set_stay_in:
-    mov r9, #1
-    str r9, [r7]
-    b done
-
-set_eat_ice_cream:
-    mov r9, #1
-    str r9, [r8]
-    b done
+    /* If balance == 0, set eat_ice_cream = 1 */
+    LDR r4, =eat_ice_cream
+    MOV r5, #1
+    STR r5, [r4]
+    B update_r0
 
 set_eat_out:
-    mov r9, #1
-    str r9, [r6]
-    b done
+    LDR r4, =eat_out
+    MOV r5, #1
+    STR r5, [r4]
+    B update_r0
 
-overflow_error:
-    ldr r10, =we_have_a_problem
-    mov r9, #1
-    str r9, [r10]
-    b done
-    
+set_stay_in:
+    LDR r4, =stay_in
+    MOV r5, #1
+    STR r5, [r4]
+    B update_r0
+
+handle_problem:
+    /* Invalid transaction: reset transaction and flag an issue */
+    LDR r4, =transaction
+    MOV r5, #0
+    STR r5, [r4]
+    LDR r4, =we_have_a_problem
+    MOV r5, #1
+    STR r5, [r4]
+    LDR r4, =balance
+    STR r6, [r4]  /* Restore balance */
+    B update_r0
+
+update_r0:
+    /* Update r0 with new balance value */
+    LDR r4, =balance
+    LDR r0, [r4]
+
+    B done
+
     /*** STUDENTS: Place your code ABOVE this line!!! **************/
 
 done:    
@@ -147,7 +167,3 @@ done:
 /**********************************************************************/   
 .end  /* The assembler will not process anything after this directive!!! */
            
-
-
-
-
